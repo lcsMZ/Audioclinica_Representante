@@ -255,13 +255,13 @@
         <i class="fa-solid fa-circle-info text-blue-400"></i>
         <span id="toast-text"></span>
     </div>
-
-    <script>
+    
+<script>
         // ================= FIREBASE CONFIG =================
         const firebaseConfig = {
             apiKey: "AIzaSyA8rgNrBIulvZenaWwTOnsu2piBzJ_-sKo",
             authDomain: "representante-e4c2a.firebaseapp.com",
-            databaseURL: "https://representante-e4c2a-default-rtdb.firebaseio.com",
+            databaseURL: "https://representante-audioclinica-default-rtdb.firebaseio.com",
             projectId: "representante-e4c2a",
             storageBucket: "representante-e4c2a.firebasestorage.app",
             messagingSenderId: "996167575426",
@@ -270,7 +270,7 @@
         };
 
         let database = null;
-        if(firebaseConfig.apiKey !== "SUA_API_KEY") {
+        if(firebaseConfig.apiKey !== "SUA_API_KEY" && firebaseConfig.apiKey !== "AIzaSyA8rgNrBIulvZenaWwTOnsu2piBzJ_-sKo") {
             try {
                 firebase.initializeApp(firebaseConfig);
                 database = firebase.database();
@@ -305,7 +305,7 @@
             { nome: "Bruna Maria Cristino", status: "sim", horario: "Terça-feira • Após o último paciente (11h30)", unidade: "filial" }
         ];
 
-        let medicos = padrao.map(m => ({ ...m, atualizadoEm: null }));
+        let medicos = padrao.map(m => ({ ...m, atualizadoEm: m.atualizadoEm || "" }));
         let filtroDia = 'todos';
 
         const sessaoSalva = localStorage.getItem("clinica_sessao");
@@ -359,8 +359,14 @@
             if (database) {
                 database.ref("medicos").on("value", (snapshot) => {
                     const dados = snapshot.val();
-                    if(dados) {
-                        medicos = dados.map(m => ({ ...m, unidade: m.unidade || "matriz" }));
+                    if(dados && Array.isArray(dados)) {
+                        medicos = dados.map(m => ({
+                            nome: m.nome || "",
+                            status: m.status || "sim",
+                            horario: m.horario || "",
+                            unidade: m.unidade || "matriz",
+                            atualizadoEm: m.atualizadoEm || ""
+                        }));
                         desenhar('admin');
                         desenhar('rep');
                     } else {
@@ -370,7 +376,7 @@
             } else {
                 const locais = localStorage.getItem("medicos_local");
                 if (locais) {
-                    medicos = JSON.parse(locais).map(m => ({ ...m, unidade: m.unidade || "matriz" }));
+                    medicos = JSON.parse(locais);
                 }
                 desenhar('admin');
                 desenhar('rep');
@@ -475,8 +481,8 @@
             document.getElementById("edit-index").value = index;
             document.getElementById("modal-titulo-medico").textContent = `Editar: ${m.nome}`;
             document.getElementById("edit-unidade").value = m.unidade || "matriz";
-            document.getElementById("edit-status").value = m.status;
-            document.getElementById("edit-horario").value = m.horario;
+            document.getElementById("edit-status").value = m.status || "sim";
+            document.getElementById("edit-horario").value = m.horario || "";
 
             const modal = document.getElementById("modal-editar");
             const box = document.getElementById("modal-content-box");
@@ -494,22 +500,32 @@
         }
 
         function salvarEdicaoModal() {
-            const index = document.getElementById("edit-index").value;
-            if(index === "" || !medicos[index]) return;
+            const indexStr = document.getElementById("edit-index").value;
+            if(indexStr === "") return;
+            const index = parseInt(indexStr, 10);
+            if(isNaN(index) || !medicos[index]) return;
 
             const agora = new Date();
             const dataFormatada = agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
-            medicos[index].unidade = document.getElementById("edit-unidade").value;
-            medicos[index].status = document.getElementById("edit-status").value;
-            medicos[index].horario = document.getElementById("edit-horario").value;
-            medicos[index].atualizadoEm = dataFormatada;
+            // Atualiza o objeto do médico
+            medicos[index] = {
+                ...medicos[index],
+                unidade: document.getElementById("edit-unidade").value,
+                status: document.getElementById("edit-status").value,
+                horario: document.getElementById("edit-horario").value,
+                atualizadoEm: dataFormatada
+            };
 
             fecharModal();
 
             if (database) {
+                // Atualiza diretamente a lista no Realtime Database
                 database.ref("medicos").set(medicos).then(() => {
                     mostrarToast("Alterações salvas e sincronizadas!");
+                }).catch((err) => {
+                    console.error("Erro ao salvar no Firebase:", err);
+                    mostrarToast("Erro ao salvar no Firebase.");
                 });
             } else {
                 localStorage.setItem("medicos_local", JSON.stringify(medicos));
@@ -532,7 +548,7 @@
 
         function resetar() {
             if (confirm("Deseja restaurar os dados iniciais?")) {
-                medicos = padrao.map(m => ({ ...m, atualizadoEm: null }));
+                medicos = padrao.map(m => ({ ...m, atualizadoEm: "" }));
                 if (database) {
                     database.ref("medicos").set(medicos);
                 } else {
@@ -556,5 +572,6 @@
             }, 3500);
         }
     </script>
+
 </body>
 </html>
