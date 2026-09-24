@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Agenda de Representantes - Clínica Otorrino</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0f4c81',
+                        'primary-hover': '#08355b',
+                        'bg-body': '#f4f7fa',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Firebase SDKs (Compat version) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+    <style>
+        .page {
+            display: none !important;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .page.active {
+            display: flex !important;
+            opacity: 1;
+        }
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans flex flex-col min-h-full antialiased selection:bg-blue-100 selection:text-blue-900">
+
+    <!-- ================= LOGIN SCREEN ================= -->
+    <div id="tela-login" class="page active flex-1 items-center justify-center p-4 bg-gradient-to-br from-[#0f4c81] via-[#165d9c] to-[#1d6fa5] min-h-screen">
+        <div class="bg-white/95 backdrop-blur-md p-8 sm:p-10 rounded-2xl shadow-2xl w-full max-w-[420px] text-center border border-white/20 transform transition-all duration-300 hover:shadow-[0_20px_50px_rgba(0,0,0,0.2)]">
+            <div class="w-16 h-16 bg-blue-50 text-primary rounded-2xl mx-auto flex items-center justify-center text-2xl mb-5 shadow-inner">
+                <i class="fa-solid fa-stethoscope"></i>
+            </div>
+            <h1 class="text-slate-900 font-bold text-2xl mb-1 tracking-tight">Clínica Otorrino</h1>
+            <p class="text-slate-500 text-sm mb-8 font-medium">Acesse o painel de agenda de representantes</p>
+            
+            <div class="space-y-4 text-left">
+                <div>
+                    <label for="usuario" class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Usuário</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                            <i class="fa-regular fa-user text-xs"></i>
+                        </span>
+                        <input type="text" id="usuario" placeholder="admin ou otorrino" class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-primary transition-all">
+                    </div>
+                </div>
+                <div>
+                    <label for="senha" class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Senha</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                            <i class="fa-solid fa-lock text-xs"></i>
+                        </span>
+                        <input type="password" id="senha" placeholder="Sua senha" class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-primary transition-all">
+                    </div>
+                </div>
+                <button onclick="realizarLogin()" class="w-full mt-3 bg-primary hover:bg-[#08355b] text-white font-semibold py-3.5 px-4 rounded-xl shadow-lg shadow-blue-500/25 transition-all duration-200 transform active:scale-[0.98] flex items-center justify-center gap-2">
+                    <span>Entrar no Painel</span>
+                    <i class="fa-solid fa-arrow-right-to-bracket text-xs opacity-80"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= ADMIN SCREEN ================= -->
+    <div id="tela-admin" class="page flex-1 flex-col">
+        <header class="bg-gradient-to-r from-[#0f4c81] to-[#1d6fa5] text-white py-5 px-6 shadow-md relative">
+            <div class="max-w-[1200px] mx-auto flex items-center justify-between">
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2.5">
+                        <i class="fa-solid fa-hospital text-blue-200 text-lg"></i>
+                        Clínica Otorrino
+                    </h1>
+                    <p class="text-xs sm:text-sm text-blue-100 font-medium mt-0.5">Painel - Administrador (Clique em qualquer médico para editar)</p>
+                </div>
+                <button class="logout-btn bg-white/15 hover:bg-white/25 text-white px-4 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all duration-200 flex items-center gap-2 backdrop-blur-sm border border-white/10" onclick="logout()">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span>Sair</span>
+                </button>
+            </div>
+        </header>
+
+        <main class="w-[min(1000px,95%)] mx-auto my-6 flex-1 flex flex-col gap-6">
+            <div class="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200 flex flex-col gap-4">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <h2 class="text-primary font-bold text-base flex items-center gap-2.5 border-l-4 border-primary pl-3 py-0.5">
+                        <span>Gerenciamento de Médicos</span>
+                    </h2>
+                    <button onclick="resetar()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span>Restaurar Originais</span>
+                    </button>
+                </div>
+                
+                <div class="flex flex-col gap-3.5">
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                            <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                        </span>
+                        <input type="text" id="busca-admin" placeholder="Buscar médico pelo nome..." oninput="desenhar('admin')" class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-primary transition-all">
+                    </div>
+                    <div>
+                        <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Filtrar por Dia</div>
+                        <div class="flex gap-1.5 flex-wrap" id="filtro-dias-admin">
+                            <button class="filter-btn active bg-primary text-white font-semibold border-primary px-3 py-1.5 rounded-xl text-xs transition-all shadow-sm flex-1 text-center" onclick="definirFiltroDia('todos', this, 'admin')">Todos</button>
+                            <button class="filter-btn bg-transparent text-slate-500 border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-xl text-xs transition-all flex-1 text-center" onclick="definirFiltroDia('segunda', this, 'admin')">Seg</button>
+                            <button class="filter-btn bg-transparent text-slate-500 border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-xl text-xs transition-all flex-1 text-center" onclick="definirFiltroDia('terça', this, 'admin')">Ter</button>
+                            <button class="filter-btn bg-transparent text-slate-500 border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-xl text-xs transition-all flex-1 text-center" onclick="definirFiltroDia('quarta', this, 'admin')">Qua</button>
+                            <button class="filter-btn bg-transparent text-slate-500 border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-xl text-xs transition-all flex-1 text-center" onclick="definirFiltroDia('quinta', this, 'admin')">Qui</button>
+                            <button class="filter-btn bg-transparent text-slate-500 border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-xl text-xs transition-all flex-1 text-center" onclick="definirFiltroDia('sexta', this, 'admin')">Sex</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="lista-admin" class="flex flex-col gap-3 mt-1"></div>
+            </div>
+        </main>
+        <footer class="text-center text-slate-400 py-4 text-[11px] border-t border-slate-200 bg-white mt-auto font-medium">
+            Atualizado em tempo real • Clínica Otorrino
+        </footer>
+    </div>
+
+    <!-- ================= REPRESENTATIVE SCREEN ================= -->
+    <div id="tela-rep" class="page flex-1 flex-col">
+        <header class="bg-gradient-to-r from-[#0f4c81] to-[#1d6fa5] text-white py-5 px-6 shadow-md relative">
+            <div class="max-w-[1200px] mx-auto flex items-center justify-between">
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2.5">
+                        <i class="fa-solid fa-hospital text-blue-200 text-lg"></i>
+                        Clínica Otorrino
+                    </h1>
+                    <p class="text-xs sm:text-sm text-blue-100 font-medium mt-0.5">Painel de Agenda de Representantes</p>
+                </div>
+                <button class="logout-btn bg-white/15 hover:bg-white/25 text-white px-4 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all duration-200 flex items-center gap-2 backdrop-blur-sm border border-white/10" onclick="logout()">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span>Sair</span>
+                </button>
+            </div>
+        </header>
+
+        <main class="w-[min(800px,95%)] mx-auto my-6 flex-1 flex flex-col">
+            <div class="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200 flex flex-col gap-4">
+                <h2 class="text-primary font-bold text-base flex items-center gap-2.5 border-l-4 border-primary pl-3 py-0.5">
+                    <span>Médicos disponíveis hoje</span>
+                </h2>
+                
+                <div class="flex flex-col gap-3.5">
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                            <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                        </span>
+                        <input type="text" id="busca-rep" placeholder="Buscar médico pelo nome..." oninput="desenhar('rep')" class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-primary transition-all">
+                    </div>
+                    <div>
+                        <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Filtrar por Dia</div>
+                        <div class="flex gap-1.5 flex-wrap" id="filtro-dias-rep">
+                            <button class="filter-btn active bg-primary text-white font-semibold border-primary px-3 py-1.5 rounded-xl text-xs transition-all shadow-sm flex-1 text-center" onclick="definirFiltroDia('todos', this, 'rep')">Todos</button>
+                            <button class="filter-btn bg-transparent text-slate-500 border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-xl text-xs transition-all flex-1 text-center" onclick="definirFiltroDia('segunda', this, 'rep')">Seg</button>
+                            <button class="filter-btn bg-transparent text-slate-500 border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-xl text-xs transition-all flex-1 text-center" onclick="definirFiltroDia('terça', this, 'rep')">Ter</button>
+                            <button class="filter-btn bg-transparent text-slate-500 border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-xl text-xs transition-all flex-1 text-center" onclick="definirFiltroDia('quarta', this, 'rep')">Qua</button>
+                            <button class="filter-btn bg-transparent text-slate-500 border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-xl text-xs transition-all flex-1 text-center" onclick="definirFiltroDia('quinta', this, 'rep')">Qui</button>
+                            <button class="filter-btn bg-transparent text-slate-500 border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-xl text-xs transition-all flex-1 text-center" onclick="definirFiltroDia('sexta', this, 'rep')">Sex</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="lista-rep" class="flex flex-col gap-3 mt-1"></div>
+            </div>
+        </main>
+        <footer class="text-center text-slate-400 py-4 text-[11px] border-t border-slate-200 bg-white mt-auto font-medium">
+            Atualizado em tempo real • Clínica Otorrino
+        </footer>
+    </div>
+
+    <!-- ================= EDIT MODAL (ADMIN) ================= -->
+    <div id="modal-editar" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl border border-slate-100 transform scale-95 transition-all duration-300" id="modal-content-box">
+            <div class="flex justify-between items-center pb-3 border-b border-slate-100 mb-4">
+                <h3 class="text-primary font-bold text-base flex items-center gap-2">
+                    <i class="fa-solid fa-user-pen"></i>
+                    <span id="modal-titulo-medico">Editar Médico</span>
+                </h3>
+                <button onclick="fecharModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg transition-colors">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            
+            <input type="hidden" id="edit-index">
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Unidade (Local de Atendimento)</label>
+                    <select id="edit-unidade" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-primary transition-all">
+                        <option value="matriz">Matriz</option>
+                        <option value="filial">Filial</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Status de Recepção</label>
+                    <select id="edit-status" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-primary transition-all">
+                        <option value="sim">Recebe Representantes</option>
+                        <option value="nao">Não Recebe</option>
+                        <option value="agendamento">Somente Agendamento</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Horário / Observação</label>
+                    <input id="edit-horario" placeholder="Ex: Segunda-feira • Manhã" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-primary transition-all">
+                </div>
+                <div class="pt-3 flex gap-3">
+                    <button onclick="fecharModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-3 px-4 rounded-xl transition-all text-xs sm:text-sm">Cancelar</button>
+                    <button onclick="salvarEdicaoModal()" class="flex-1 bg-primary hover:bg-[#08355b] text-white font-semibold py-3 px-4 rounded-xl shadow-md shadow-blue-500/20 transition-all text-xs sm:text-sm flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-cloud-arrow-up text-xs"></i>
+                        <span>Salvar</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast" class="fixed bottom-6 inset-x-0 mx-auto max-w-xs bg-slate-800 text-white px-5 py-3 rounded-2xl text-xs font-medium text-center shadow-2xl transition-all duration-300 transform translate-y-12 opacity-0 pointer-events-none z-50 border border-slate-700/50 flex items-center justify-center gap-2">
+        <i class="fa-solid fa-circle-info text-blue-400"></i>
+        <span id="toast-text"></span>
+    </div>
+
+    <script>
+        // ================= FIREBASE CONFIG =================
+        const firebaseConfig = {
+            apiKey: "AIzaSyA8rgNrBIulvZenaWwTOnsu2piBzJ_-sKo",
+            authDomain: "representante-e4c2a.firebaseapp.com",
+            databaseURL: "https://representante-e4c2a-default-rtdb.firebaseio.com",
+            projectId: "representante-e4c2a",
+            storageBucket: "representante-e4c2a.firebasestorage.app",
+            messagingSenderId: "996167575426",
+            appId: "1:996167575426:web:945db9efffd7e1e02b919b",
+            measurementId: "G-Q9VWLHYCDZ"
+        };
+
+        let database = null;
+        if(firebaseConfig.apiKey !== "SUA_API_KEY") {
+            try {
+                firebase.initializeApp(firebaseConfig);
+                database = firebase.database();
+            } catch(e) {
+                console.warn("Erro ao iniciar Firebase:", e);
+            }
+        }
+
+        // ================= USER CREDENTIALS & DATA =================
+        const USUARIOS = {
+            admin: { usuario: "admin", senha: "123", tela: "tela-admin" },
+            representante: { usuario: "otorrino", senha: "321", tela: "tela-rep" }
+        };
+
+        const padrao = [
+            // MATRIZ
+            { nome: "Marco Aurélio", status: "sim", horario: "Terça-feira • Manhã", unidade: "matriz" },
+            { nome: "Allex Itar Ogawa", status: "sim", horario: "Quinta-feira • Tarde", unidade: "matriz" },
+            { nome: "Lúcio Eidy Takemoto", status: "sim", horario: "Sexta-feira • Após o último paciente", unidade: "matriz" },
+            { nome: "Orson Norio Takemoto", status: "sim", horario: "Sexta-feira • Após o último paciente", unidade: "matriz" },
+            { nome: "André Toshio Matsuda", status: "sim", horario: "Segunda a Quinta • A partir das 10h30 | Sexta • Tarde", unidade: "matriz" },
+            { nome: "Denis Ueda", status: "sim", horario: "Segunda a Sexta • Tarde", unidade: "matriz" },
+            { nome: "Gustavo Alcântara", status: "sim", horario: "Segunda • Dia todo | Terça • Tarde | Quarta • Manhã | Quinta • Tarde", unidade: "matriz" },
+            { nome: "Eduardo Farinazzo", status: "sim", horario: "Quarta • Tarde | Quinta • Dia todo | Sexta • Manhã", unidade: "matriz" },
+            
+            // FILIAL
+            { nome: "Fabrizio Almeida Prado", status: "sim", horario: "Segunda-feira, Terça-feira, Quinta-feira • Período da tarde", unidade: "filial" },
+            { nome: "Felipe De Oliveira", status: "sim", horario: "Quarta-feira • 13h30", unidade: "filial" },
+            { nome: "João Paulo Bispo", status: "sim", horario: "Terça-feira, Quarta-feira, Sexta-feira • Manhã", unidade: "filial" },
+            { nome: "Heloisa Bortholazzi", status: "sim", horario: "Terça-feira, Sexta-feira • Após o último paciente (11h30)", unidade: "filial" },
+            { nome: "Carolina Dorigon", status: "sim", horario: "Quinta-feira • Após o último paciente (17h30)", unidade: "filial" },
+            { nome: "Bruna Maria Cristino", status: "sim", horario: "Terça-feira • Após o último paciente (11h30)", unidade: "filial" }
+        ];
+
+        let medicos = padrao.map(m => ({ ...m, atualizadoEm: null }));
+        let filtroDia = 'todos';
+
+        const sessaoSalva = localStorage.getItem("clinica_sessao");
+        if(sessaoSalva && USUARIOS[sessaoSalva]) {
+            mudarTela(USUARIOS[sessaoSalva].tela);
+        } else {
+            mudarTela("tela-login");
+        }
+
+        function realizarLogin() {
+            const uInput = document.getElementById("usuario").value.trim().toLowerCase();
+            const sInput = document.getElementById("senha").value;
+
+            let chaveEncontrada = null;
+            for (let chave in USUARIOS) {
+                if (USUARIOS[chave].usuario === uInput && USUARIOS[chave].senha === sInput) {
+                    chaveEncontrada = chave;
+                    break;
+                }
+            }
+
+            if(chaveEncontrada) {
+                localStorage.setItem("clinica_sessao", chaveEncontrada);
+                mudarTela(USUARIOS[chaveEncontrada].tela);
+                mostrarToast("Acesso concedido com sucesso!");
+            } else {
+                mostrarToast("Usuário ou senha incorretos.");
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem("clinica_sessao");
+            mudarTela("tela-login");
+            mostrarToast("Sessão encerrada.");
+        }
+
+        function mudarTela(idTela) {
+            document.querySelectorAll(".page").forEach(p => {
+                p.classList.remove("active");
+            });
+            const t = document.getElementById(idTela);
+            if(t) {
+                t.classList.add("active");
+                if(idTela !== 'tela-login') {
+                    escutarBanco();
+                }
+            }
+        }
+
+        function escutarBanco() {
+            if (database) {
+                database.ref("medicos").on("value", (snapshot) => {
+                    const dados = snapshot.val();
+                    if(dados) {
+                        medicos = dados.map(m => ({ ...m, unidade: m.unidade || "matriz" }));
+                        desenhar('admin');
+                        desenhar('rep');
+                    } else {
+                        database.ref("medicos").set(medicos);
+                    }
+                });
+            } else {
+                const locais = localStorage.getItem("medicos_local");
+                if (locais) {
+                    medicos = JSON.parse(locais).map(m => ({ ...m, unidade: m.unidade || "matriz" }));
+                }
+                desenhar('admin');
+                desenhar('rep');
+            }
+        }
+
+        function verificarDiaNoHorario(textoHorario, diaAlvo) {
+            if (diaAlvo === 'todos') return true;
+            const texto = textoHorario.toLowerCase();
+            const diasDaSemana = ['segunda', 'terça', 'quarta', 'quinta', 'sexta'];
+            const idxAlvo = diasDaSemana.indexOf(diaAlvo);
+
+            if (texto.includes("segunda a sexta")) return idxAlvo >= 0 && idxAlvo <= 4;
+            if (texto.includes("segunda a quinta")) return idxAlvo >= 0 && idxAlvo <= 3;
+            
+            const normalizar = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            return normalizar(texto).includes(normalizar(diaAlvo));
+        }
+
+        function desenhar(tipoPainel) {
+            const containerLista = document.getElementById(`lista-${tipoPainel}`);
+            if(!containerLista) return;
+
+            containerLista.innerHTML = "";
+            const buscaInput = document.getElementById(`busca-${tipoPainel}`);
+            const termoBusca = buscaInput ? buscaInput.value.toLowerCase() : "";
+
+            const filtrados = medicos.map((m, index) => ({ ...m, originalIndex: index })).filter(m => {
+                const atendeFiltroDia = verificarDiaNoHorario(m.horario, filtroDia);
+                const atendeBusca = m.nome.toLowerCase().includes(termoBusca);
+                return atendeFiltroDia && atendeBusca;
+            });
+
+            if (filtrados.length === 0) {
+                containerLista.innerHTML = `<div class="text-center py-8 text-slate-400 text-xs font-medium bg-slate-50 rounded-xl border border-dashed border-slate-200">Nenhum registro correspondente.</div>`;
+                return;
+            }
+
+            const matriz = filtrados.filter(m => (m.unidade || "matriz") === "matriz");
+            const filial = filtrados.filter(m => m.unidade === "filial");
+
+            let conteudoHTML = "";
+
+            if(matriz.length > 0) {
+                conteudoHTML += `<div class="text-[11px] font-bold text-primary uppercase tracking-wider mt-2 mb-1 pb-1 border-b border-slate-100 flex items-center gap-1.5"><i class="fa-solid fa-building text-[10px]"></i> Unidade Matriz</div>`;
+                matriz.forEach(m => {
+                    conteudoHTML += gerarHTMLMedico(m, tipoPainel);
+                });
+            }
+
+            if(filial.length > 0) {
+                conteudoHTML += `<div class="text-[11px] font-bold text-primary uppercase tracking-wider mt-5 mb-1 pb-1 border-b border-slate-100 flex items-center gap-1.5"><i class="fa-solid fa-code-branch text-[10px]"></i> Unidade Filial</div>`;
+                filial.forEach(m => {
+                    conteudoHTML += gerarHTMLMedico(m, tipoPainel);
+                });
+            }
+
+            containerLista.innerHTML = conteudoHTML;
+        }
+
+        function gerarHTMLMedico(m, tipoPainel) {
+            let statusClass = '';
+            let statusText = '';
+            if (m.status === 'sim') {
+                statusClass = 'bg-emerald-500 text-white';
+                statusText = 'Recebe';
+            } else if (m.status === 'nao') {
+                statusClass = 'bg-rose-500 text-white';
+                statusText = 'Não Recebe';
+            } else {
+                statusClass = 'bg-amber-500 text-white';
+                statusText = 'Agendamento';
+            }
+
+            let updateBadge = m.atualizadoEm ? `<span class="text-[10px] text-slate-400 mt-1 block font-medium flex items-center gap-1"><i class="fa-regular fa-clock"></i> Atualizado em: ${m.atualizadoEm}</span>` : '';
+            
+            const isAdmin = tipoPainel === 'admin';
+            const clickAttr = isAdmin ? `onclick="abrirModal(${m.originalIndex})"` : '';
+            const cursorClass = isAdmin ? `cursor-pointer hover:border-primary hover:shadow-md hover:bg-blue-50/20` : `hover:border-blue-200 hover:shadow-sm`;
+
+            return `
+                <div ${clickAttr} class="flex flex-col sm:flex-row justify-between items-start sm:items-center border border-slate-200/80 rounded-xl p-3.5 gap-3 bg-white transition-all duration-200 ${cursorClass} group">
+                    <div class="flex flex-col gap-0.5">
+                        <div class="flex items-center gap-2">
+                            <h3 class="text-xs sm:text-sm font-bold text-slate-800 ${isAdmin ? 'group-hover:text-primary transition-colors' : ''}">${m.nome}</h3>
+                            ${isAdmin ? '<span class="text-[10px] text-primary opacity-0 group-hover:opacity-100 transition-opacity font-semibold flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded-md"><i class="fa-solid fa-pen-to-square"></i> Editar</span>' : ''}
+                        </div>
+                        <p class="text-xs text-slate-500 font-medium">${m.horario}</p>
+                        ${updateBadge}
+                    </div>
+                    <div class="px-3 py-1.5 rounded-full text-[11px] font-semibold text-center min-w-[115px] shadow-sm ${statusClass} flex items-center justify-center gap-1.5 self-end sm:self-center">
+                        <span>${statusText}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function abrirModal(index) {
+            const m = medicos[index];
+            if(!m) return;
+
+            document.getElementById("edit-index").value = index;
+            document.getElementById("modal-titulo-medico").textContent = `Editar: ${m.nome}`;
+            document.getElementById("edit-unidade").value = m.unidade || "matriz";
+            document.getElementById("edit-status").value = m.status;
+            document.getElementById("edit-horario").value = m.horario;
+
+            const modal = document.getElementById("modal-editar");
+            const box = document.getElementById("modal-content-box");
+            modal.classList.remove("opacity-0", "pointer-events-none");
+            box.classList.remove("scale-95");
+            box.classList.add("scale-100");
+        }
+
+        function fecharModal() {
+            const modal = document.getElementById("modal-editar");
+            const box = document.getElementById("modal-content-box");
+            modal.classList.add("opacity-0", "pointer-events-none");
+            box.classList.remove("scale-100");
+            box.classList.add("scale-95");
+        }
+
+        function salvarEdicaoModal() {
+            const index = document.getElementById("edit-index").value;
+            if(index === "" || !medicos[index]) return;
+
+            const agora = new Date();
+            const dataFormatada = agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+            medicos[index].unidade = document.getElementById("edit-unidade").value;
+            medicos[index].status = document.getElementById("edit-status").value;
+            medicos[index].horario = document.getElementById("edit-horario").value;
+            medicos[index].atualizadoEm = dataFormatada;
+
+            fecharModal();
+
+            if (database) {
+                database.ref("medicos").set(medicos).then(() => {
+                    mostrarToast("Alterações salvas e sincronizadas!");
+                });
+            } else {
+                localStorage.setItem("medicos_local", JSON.stringify(medicos));
+                desenhar('admin');
+                desenhar('rep');
+                mostrarToast("Salvo localmente!");
+            }
+        }
+
+        function definirFiltroDia(dia, botao, tipoPainel) {
+            filtroDia = dia;
+            document.querySelectorAll(`#filtro-dias-${tipoPainel} .filter-btn`).forEach(b => {
+                b.classList.remove('active', 'bg-primary', 'text-white', 'font-semibold', 'border-primary', 'shadow-sm');
+                b.classList.add('bg-transparent', 'text-slate-500', 'border-slate-200');
+            });
+            botao.classList.remove('bg-transparent', 'text-slate-500', 'border-slate-200');
+            botao.classList.add('active', 'bg-primary', 'text-white', 'font-semibold', 'border-primary', 'shadow-sm');
+            desenhar(tipoPainel);
+        }
+
+        function resetar() {
+            if (confirm("Deseja restaurar os dados iniciais?")) {
+                medicos = padrao.map(m => ({ ...m, atualizadoEm: null }));
+                if (database) {
+                    database.ref("medicos").set(medicos);
+                } else {
+                    localStorage.setItem("medicos_local", JSON.stringify(medicos));
+                    desenhar('admin');
+                    desenhar('rep');
+                }
+                mostrarToast("Configurações originais restauradas!");
+            }
+        }
+
+        function mostrarToast(mensagem) {
+            const toast = document.getElementById("toast");
+            const toastText = document.getElementById("toast-text");
+            toastText.textContent = mensagem;
+            toast.classList.remove("translate-y-12", "opacity-0", "pointer-events-none");
+            toast.classList.add("translate-y-0", "opacity-100");
+            setTimeout(() => { 
+                toast.classList.remove("translate-y-0", "opacity-100");
+                toast.classList.add("translate-y-12", "opacity-0", "pointer-events-none");
+            }, 3500);
+        }
+    </script>
+</body>
+</html>
